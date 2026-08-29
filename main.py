@@ -1,30 +1,50 @@
 books = []
 
+def get_int():
+    while True:
+        try:
+            given_id = int(input("Please enter an Id: "))
+        except ValueError:
+            print("This is not an integer")
+            continue
+
+        if given_id <= 0:
+            print("ID must be a positive integer.")
+            continue
+
+        return given_id
+
+
 def add_book():
     while True:
+        given_id = get_int()
         id_exists = False
-        given_id = int(input("Please enter an Id: "))
+
         for book in books:
             if book["id"] == given_id:
                 id_exists = True
-                print(f"This ID already exists. Please enter a new ID.")
                 break
-        if not id_exists:
-            break
-                
+
+        if id_exists:
+            print("This ID already exists. Please enter a new ID.")
+            continue
+
+        break
+
     title = input("Give a Book Title: ")
     author = input("Give an Author Name: ")
-    
+
     create_book = {
-        "id" : given_id,
-        "title" : title,
-        "author" : author,
-        "available" : True
+        "id": given_id,
+        "title": title,
+        "author": author,
+        "available": True
     }
-    
+
     books.append(create_book)
     print("The book is successfully added")
     print(create_book)
+
 
 def view_available_books():
     total_books = 0 
