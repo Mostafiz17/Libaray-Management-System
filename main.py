@@ -27,7 +27,6 @@ class Library:
 
     def __init__(self):
         self.books = []
-
     def get_int(self):
         while True:
             try:
@@ -39,25 +38,20 @@ class Library:
             if value <= 0:
                 print("ID must be a positive integer.")
                 continue
-
             return value
 
     def add_book(self):
         while True:
             given_id = self.get_int()
             id_exists = False
-
             for book in self.books:
                 if book.id == given_id:
                     id_exists = True
                     break
-
             if id_exists:
                 print("This ID already exists. Please enter a new ID.")
                 continue
-
             break
-
         title = input("Give a Book Title: ").strip()
         author = input("Give an Author Name: ").strip()
 
@@ -76,13 +70,11 @@ class Library:
         for book in self.books:
             if book.is_available():
                 total_books += 1
-
                 print(f"ID: {book.id}")
                 print(f"Title: {book.title}")
                 print(f"Author: {book.author}")
                 print("Status: Available")
                 print("-----------------------------------")
-
         if total_books == 0:
             print("No books are currently available.")
         else:
@@ -90,9 +82,7 @@ class Library:
 
     def search_book(self):
         search_term = input("Search for a book: ").strip().lower()
-
         found = False
-
         for book in self.books:
 
             if (
@@ -101,7 +91,6 @@ class Library:
                 or search_term in book.author.lower()
             ):
                 found = True
-
                 print("\nBook Found")
                 print(f"ID: {book.id}")
                 print(f"Title: {book.title}")
@@ -111,7 +100,6 @@ class Library:
                     print("Status: Available")
                 else:
                     print("Status: Borrowed")
-
                 print("-----------------------------------")
 
         if not found:
@@ -122,35 +110,26 @@ class Library:
             given_id = self.get_int()
 
             for book in self.books:
-
                 if book.id == given_id:
-
                     book.borrow()
                     return
 
             print("Book not found. Please enter another ID.")
-
     def return_book(self):
         while True:
             given_id = self.get_int()
 
             for book in self.books:
-
                 if book.id == given_id:
-
                     book.return_book()
                     return
-
             print("Book ID not found. Please enter another ID.")
 
-
 library = Library()
-
 
 def main():
 
     while True:
-
         print("""
 ================================
       LIBRARY MANAGEMENT
