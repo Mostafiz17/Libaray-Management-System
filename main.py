@@ -1,141 +1,150 @@
-books = []
+class Book:
+    def __init__(self, id, title, author):
+        self.id = id
+        self.title = title
+        self.author = author
+        self.__available = True
 
+    def __str__(self):
+        return f"ID: {self.id}, Title: {self.title}, Author: {self.author}, Available: {self.__available}"
 
-def get_int():
-    while True:
-        try:
-            value = int(input("Please enter an ID: "))
-        except ValueError:
-            print("This is not an integer.")
-            continue
+    def borrow(self):
+        if self.__available:
+            print("Book borrowed successfully.")
+            self.__available = False
+        else:
+            print("Book is already borrowed.")
 
-        if value <= 0:
-            print("ID must be a positive integer.")
-            continue
+    def return_book(self):
+        if self.__available:
+            print("Book is already available.")
+        else:
+            self.__available = True
+            print("Book successfully returned.")
+    def is_available(self):
+        return self.__available
+class Library:
 
-        return value
+    def __init__(self):
+        self.books = []
 
+    def get_int(self):
+        while True:
+            try:
+                value = int(input("Please enter an ID: "))
+            except ValueError:
+                print("This is not an integer.")
+                continue
 
-def add_book():
-    while True:
-        given_id = get_int()
+            if value <= 0:
+                print("ID must be a positive integer.")
+                continue
 
-        id_exists = False
+            return value
 
-        for book in books:
-            if book["id"] == given_id:
-                id_exists = True
-                break
+    def add_book(self):
+        while True:
+            given_id = self.get_int()
+            id_exists = False
 
-        if id_exists:
-            print("This ID already exists. Please enter a new ID.")
-            continue
+            for book in self.books:
+                if book.id == given_id:
+                    id_exists = True
+                    break
 
-        break
+            if id_exists:
+                print("This ID already exists. Please enter a new ID.")
+                continue
 
-    title = input("Give a Book Title: ").strip()
-    author = input("Give an Author Name: ").strip()
+            break
 
-    create_book = {
-        "id": given_id,
-        "title": title,
-        "author": author,
-        "available": True
-    }
+        title = input("Give a Book Title: ").strip()
+        author = input("Give an Author Name: ").strip()
 
-    books.append(create_book)
+        new_book = Book(given_id, title, author)
 
-    print("\nThe book was successfully added.")
-    print(create_book)
+        self.books.append(new_book)
 
+        print("\nThe book was successfully added.")
+        print(new_book)
 
-def view_available_books():
-    total_books = 0
+    def view_available_books(self):
+        total_books = 0
 
-    print("\n========== AVAILABLE BOOKS ==========")
+        print("\n========== AVAILABLE BOOKS ==========")
 
-    for book in books:
-        if book["available"]:
-            total_books += 1
+        for book in self.books:
+            if book.is_available():
+                total_books += 1
 
-            print(f"ID: {book['id']}")
-            print(f"Title: {book['title']}")
-            print(f"Author: {book['author']}")
-            print("Status: Available")
-            print("-----------------------------------")
-
-    if total_books == 0:
-        print("No books are currently available.")
-    else:
-        print(f"Total available books: {total_books}")
-
-
-def search_book():
-    search_term = input("Search for a book: ").strip().lower()
-
-    found = False
-
-    for book in books:
-
-        if (
-            search_term in str(book["id"]).lower()
-            or search_term in book["title"].lower()
-            or search_term in book["author"].lower()
-        ):
-            found = True
-
-            print("\nBook Found")
-            print(f"ID: {book['id']}")
-            print(f"Title: {book['title']}")
-            print(f"Author: {book['author']}")
-
-            if book["available"]:
+                print(f"ID: {book.id}")
+                print(f"Title: {book.title}")
+                print(f"Author: {book.author}")
                 print("Status: Available")
-            else:
-                print("Status: Borrowed")
+                print("-----------------------------------")
 
-            print("-----------------------------------")
+        if total_books == 0:
+            print("No books are currently available.")
+        else:
+            print(f"Total available books: {total_books}")
 
-    if not found:
-        print("Book not found.")
+    def search_book(self):
+        search_term = input("Search for a book: ").strip().lower()
 
+        found = False
 
-def borrow_book():
-    while True:
-        given_id = get_int()
+        for book in self.books:
 
-        for book in books:
+            if (
+                search_term in str(book.id)
+                or search_term in book.title.lower()
+                or search_term in book.author.lower()
+            ):
+                found = True
 
-            if book["id"] == given_id:
+                print("\nBook Found")
+                print(f"ID: {book.id}")
+                print(f"Title: {book.title}")
+                print(f"Author: {book.author}")
 
-                if book["available"]:
-                    book["available"] = False
-                    print("Book borrowed successfully.")
+                if book.is_available():
+                    print("Status: Available")
                 else:
-                    print("Book is already borrowed.")
+                    print("Status: Borrowed")
 
-                return
+                print("-----------------------------------")
 
-        print("Book not found. Please enter another ID.")
+        if not found:
+            print("Book not found.")
+
+    def borrow_book(self):
+        while True:
+            given_id = self.get_int()
+
+            for book in self.books:
+
+                if book.id == given_id:
+
+                    book.borrow()
+                    return
+
+            print("Book not found. Please enter another ID.")
+
+    def return_book(self):
+        while True:
+            given_id = self.get_int()
+
+            for book in self.books:
+
+                if book.id == given_id:
+
+                    book.return_book()
+                    return
+
+            print("Book ID not found. Please enter another ID.")
 
 
-def return_book():
-    while True:
-        given_id = get_int()
-
-        for book in books:
-
-            if book["id"] == given_id:
-
-                if book["available"]:
-                    print("This book is already available.")
-                else:
-                    book["available"] = True
-                    print("Book returned successfully.")
-
-                return
-
-        print("Book ID not found. Please enter another ID.")
+library = Library()
 
 
 def main():
@@ -167,19 +176,19 @@ def main():
             continue
 
         if choice_option == 1:
-            add_book()
+            library.add_book()
 
         elif choice_option == 2:
-            view_available_books()
+            library.view_available_books()
 
         elif choice_option == 3:
-            search_book()
+            library.search_book()
 
         elif choice_option == 4:
-            borrow_book()
+            library.borrow_book()
 
         elif choice_option == 5:
-            return_book()
+            library.return_book()
 
         elif choice_option == 6:
             print("Thank you for using the Library Management System.")
