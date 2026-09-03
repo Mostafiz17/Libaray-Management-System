@@ -144,7 +144,6 @@ class Library:
             except ValueError:
                 print("Please enter a number.")
 
-        # Create object
         if book_type == 1:
             shelf_number = input("Shelf Number: ").strip()
 
