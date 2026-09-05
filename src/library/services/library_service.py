@@ -1,31 +1,15 @@
-from models import Book, EBook, PrintedBook, Returnable
-
-
-
+from ..models.book import EBook, PrintedBook, Returnable
+from ..utils.validators import get_int
 class Library:
 
     def __init__(self):
         self.books = []
 
-    def get_int(self):
-        while True:
-            try:
-                value = int(input("Please enter an ID: "))
-
-                if value <= 0:
-                    print("ID must be a positive integer.")
-                    continue
-
-                return value
-
-            except ValueError:
-                print("Please enter a valid integer.")
-
     def add_book(self):
 
         # Get unique ID
         while True:
-            given_id = self.get_int()
+            given_id = get_int()
 
             id_exists = False
 
@@ -70,11 +54,22 @@ class Library:
 
             shelf_number = input("Shelf Number: ").strip()
 
+            copy_number = 1
+
+            for book in self.books:
+                if (
+                    isinstance(book, PrintedBook)
+                    and book.title.lower() == title.lower()
+                    and book.author.lower() == author.lower()
+                ):
+                    copy_number += 1
+
             new_book = PrintedBook(
                 given_id,
                 title,
                 author,
-                shelf_number
+                shelf_number,
+                copy_number
             )
 
         else:
@@ -96,22 +91,26 @@ class Library:
 
     def view_available_books(self):
 
-        total_books = 0
+        total_books = len(self.books)
 
-        print("\n========== AVAILABLE BOOKS ==========")
+        available_books = 0
+        borrowed_books = 0
+
+        print("\n========== LIBRARY BOOKS ==========")
 
         for book in self.books:
 
             if book.is_available():
-                total_books += 1
+                available_books += 1
+            else:
+                borrowed_books += 1
 
-                print(book)
-                print("-----------------------------------")
+            print(book)
+            print("-----------------------------------")
 
-        if total_books == 0:
-            print("No books are currently available.")
-        else:
-            print(f"Total available books: {total_books}")
+        print(f"Total copies: {total_books}")
+        print(f"Available copies: {available_books}")
+        print(f"Borrowed copies: {borrowed_books}")
 
     def search_book(self):
 
@@ -146,7 +145,7 @@ class Library:
 
         while True:
 
-            given_id = self.get_int()
+            given_id = get_int()
 
             for book in self.books:
 
@@ -161,7 +160,7 @@ class Library:
 
         while True:
 
-            given_id = self.get_int()
+            given_id = get_int()
 
             for book in self.books:
 

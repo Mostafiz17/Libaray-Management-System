@@ -1,4 +1,6 @@
-from library import Library
+
+from .models.book import EBook, PrintedBook, Returnable
+from .services.library_service import Library
 
 library = Library()
 

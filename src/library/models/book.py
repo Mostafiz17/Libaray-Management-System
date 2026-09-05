@@ -56,23 +56,29 @@ class EBook(Book):
         )
 
 class PrintedBook(Book, Returnable):
-    def __init__(self, id, title, author, shelf_number):
+
+    def __init__(self, id, title, author, shelf_number, copy_number=1):
         super().__init__(id, title, author)
+
         self.shelf_number = shelf_number
+        self.copy_number = copy_number
         self.__available = True
 
     def __str__(self):
+
         status = "Available" if self.__available else "Borrowed"
 
         return (
             f"ID: {self.id}, "
             f"Title: {self.title}, "
             f"Author: {self.author}, "
+            f"Copy: {self.copy_number}, "
             f"Shelf: {self.shelf_number}, "
             f"Status: {status}"
         )
 
     def borrow(self):
+
         if self.__available:
             self.__available = False
             print("Printed book borrowed successfully.")
@@ -80,6 +86,7 @@ class PrintedBook(Book, Returnable):
             print("Book is already borrowed.")
 
     def return_book(self):
+
         if self.__available:
             print("Book is already available.")
         else:
@@ -90,11 +97,12 @@ class PrintedBook(Book, Returnable):
         return self.__available
 
     def get_details(self):
+
         status = "Available" if self.__available else "Borrowed"
 
         return (
             f"Type: Printed Book\n"
+            f"Copy: {self.copy_number}\n"
             f"Shelf: {self.shelf_number}\n"
             f"Status: {status}"
         )
-
