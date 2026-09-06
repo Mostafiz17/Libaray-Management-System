@@ -1,9 +1,77 @@
+from ..storage.json_storage import JsonStorage
 from ..models.book import EBook, PrintedBook, Returnable
 from ..utils.validators import get_int
 class Library:
 
     def __init__(self):
         self.books = []
+        self.storage = JsonStorage("data/books.json")
+
+    def save_books(self):
+
+        data = []
+
+        for book in self.books:
+
+            if isinstance(book, PrintedBook):
+                data.append({
+                    "type": "printed",
+                    "id": book.id,
+                    "title": book.title,
+                    "author": book.author,
+                    "shelf_number": book.shelf_number,
+                    "copy_number": book.copy_number,
+                    "available": book.is_available()
+                })
+
+            elif isinstance(book, EBook):
+                data.append({
+                    "type": "ebook",
+                    "id": book.id,
+                    "title": book.title,
+                    "author": book.author,
+                    "file_size": book.file_size
+                })
+
+        self.storage.save(data)
+
+        print("Books saved successfully.")
+
+    def load_books(self):
+
+        data = self.storage.load()
+
+        self.books = []
+
+        for book_data in data:
+
+            if book_data["type"] == "printed":
+
+                book = PrintedBook(
+                    book_data["id"],
+                    book_data["title"],
+                    book_data["author"],
+                    book_data["shelf_number"],
+                    book_data["copy_number"]
+                )
+
+                if not book_data["available"]:
+                    book.borrow()
+
+                self.books.append(book)
+
+            elif book_data["type"] == "ebook":
+
+                book = EBook(
+                    book_data["id"],
+                    book_data["title"],
+                    book_data["author"],
+                    book_data["file_size"]
+                )
+
+                self.books.append(book)
+
+        print("Books loaded successfully.")
 
     def add_book(self):
 

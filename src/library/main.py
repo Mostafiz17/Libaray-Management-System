@@ -2,10 +2,12 @@
 from .models.book import EBook, PrintedBook, Returnable
 from .services.library_service import Library
 
-library = Library()
-
 
 def main():
+
+        
+    library = Library()
+    library.load_books()
 
     while True:
 
@@ -51,9 +53,8 @@ def main():
             library.return_book()
 
         elif choice_option == 6:
-            print(
-                "Thank you for using the Library Management System."
-            )
+            library.save_books()
+            print("Thank you for using the Library Management System.")
             break
 
 
