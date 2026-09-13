@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -22,14 +22,13 @@ library.load_books()
 user_service = UserService()
 user_service.load_users()
 
-
 class BookCreate(BaseModel):
     id: int
     title: str
     author: str
     type: Literal["printed", "ebook"]
-    shelf_number: str | None = None
-    file_size: str | None = None
+    shelf_number: Optional[str] = None
+    file_size: Optional[str] = None
 
 
 class UserCreate(BaseModel):

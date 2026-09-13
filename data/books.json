@@ -7,5 +7,30 @@
         "shelf_number": "544",
         "copy_number": 1,
         "available": true
+    },
+    {
+        "type": "ebook",
+        "id": 101,
+        "title": "mostafiz first book",
+        "author": "mostafiz",
+        "file_size": "21"
+    },
+    {
+        "type": "printed",
+        "id": 102,
+        "title": "another boook of mostafiz",
+        "author": "mostafiz",
+        "shelf_number": "1",
+        "copy_number": 1,
+        "available": true
+    },
+    {
+        "type": "printed",
+        "id": 103,
+        "title": "another boook of rahat",
+        "author": "rahat",
+        "shelf_number": "12",
+        "copy_number": 1,
+        "available": true
     }
 ]
