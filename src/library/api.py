@@ -1,12 +1,31 @@
 from typing import Literal, Optional
+from .services.borrow_service import (
+    borrow_book as borrow_book_from_db,
+    return_book as return_book_from_db,
+    get_borrow_history,
+)
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .models.book import EBook, PrintedBook, Returnable
 from .models.user import User
+
 from .services.library_service import Library
-from .services.user_service import UserService
+
+from .services.book_service import (
+    get_all_books,
+    get_book as get_book_from_db,
+    add_book,
+    delete_book as delete_book_from_db,
+)
+
+from .services.member_service import (
+    get_all_members,
+    get_member,
+    add_member,
+    delete_member as delete_member_from_db,
+)
 
 
 app = FastAPI(
@@ -16,11 +35,12 @@ app = FastAPI(
 )
 
 
+# Temporary old OOP library.
+# Borrow/return will be migrated later.
+
 library = Library()
 library.load_books()
 
-user_service = UserService()
-user_service.load_users()
 
 class BookCreate(BaseModel):
     id: int
@@ -37,6 +57,14 @@ class UserCreate(BaseModel):
     email: str
 
 
+class BorrowRequest(BaseModel):
+    member_id: int
+
+
+# =========================
+# HOME
+# =========================
+
 @app.get("/")
 def home():
     return {
@@ -44,206 +72,219 @@ def home():
     }
 
 
+# =========================
+# BOOKS
+# =========================
+
 @app.get("/books")
 def get_books():
-    return [
-        {
-            "id": book.id,
-            "title": book.title,
-            "author": book.author,
-            "details": book.get_details(),
-            "available": book.is_available()
-        }
-        for book in library.books
-    ]
+
+    return get_all_books()
 
 
 @app.get("/books/{book_id}")
 def get_book(book_id: int):
-    for book in library.books:
-        if book.id == book_id:
-            return {
-                "id": book.id,
-                "title": book.title,
-                "author": book.author,
-                "details": book.get_details(),
-                "available": book.is_available()
-            }
 
-    raise HTTPException(
-        status_code=404,
-        detail="Book not found"
-    )
+    book = get_book_from_db(book_id)
+
+    if book is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Book not found"
+        )
+
+    return book
 
 
 @app.post("/books")
 def create_book(book_data: BookCreate):
-    for book in library.books:
-        if book.id == book_data.id:
-            raise HTTPException(
-                status_code=400,
-                detail="Book ID already exists"
-            )
+
+    existing_book = get_book_from_db(book_data.id)
+
+    if existing_book is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Book ID already exists"
+        )
+
+    copy_number = 1
 
     if book_data.type == "printed":
+
         if not book_data.shelf_number:
             raise HTTPException(
                 status_code=400,
                 detail="shelf_number is required for printed books"
             )
 
-        copy_number = 1
+        books = get_all_books()
 
-        for book in library.books:
+        for book in books:
+
             if (
-                isinstance(book, PrintedBook)
-                and book.title.lower() == book_data.title.lower()
-                and book.author.lower() == book_data.author.lower()
+                book["type"] == "printed"
+                and book["title"].lower() == book_data.title.lower()
+                and book["author"].lower() == book_data.author.lower()
             ):
                 copy_number += 1
 
-        new_book = PrintedBook(
-            book_data.id,
-            book_data.title,
-            book_data.author,
-            book_data.shelf_number,
-            copy_number
-        )
-
     else:
+
         if not book_data.file_size:
             raise HTTPException(
                 status_code=400,
                 detail="file_size is required for ebooks"
             )
 
-        new_book = EBook(
-            book_data.id,
-            book_data.title,
-            book_data.author,
-            book_data.file_size
-        )
-
-    library.books.append(new_book)
-    library.save_books()
+    new_book = add_book(
+        book_id=book_data.id,
+        title=book_data.title,
+        author=book_data.author,
+        book_type=book_data.type,
+        shelf_number=book_data.shelf_number,
+        file_size=book_data.file_size,
+        copy_number=copy_number
+    )
 
     return {
         "message": "Book created successfully",
-        "book": {
-            "id": new_book.id,
-            "title": new_book.title,
-            "author": new_book.author,
-            "details": new_book.get_details(),
-            "available": new_book.is_available()
-        }
+        "book": new_book
     }
 
 
-@app.post("/books/{book_id}/borrow")
-def borrow_book(book_id: int):
-    for book in library.books:
-        if book.id == book_id:
-            if not book.is_available():
-                raise HTTPException(
-                    status_code=400,
-                    detail="Book is already borrowed"
-                )
+@app.delete("/books/{book_id}")
+def delete_book(book_id: int):
 
-            book.borrow()
-            library.save_books()
+    deleted = delete_book_from_db(book_id)
 
-            return {
-                "message": "Book borrowed successfully",
-                "book_id": book_id
-            }
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Book not found"
+        )
 
-    raise HTTPException(
-        status_code=404,
-        detail="Book not found"
-    )
+    return {
+        "message": "Book deleted successfully",
+        "book_id": book_id
+    }
 
 
-@app.post("/books/{book_id}/return")
-def return_book(book_id: int):
-    for book in library.books:
-        if book.id == book_id:
-            if not isinstance(book, Returnable):
-                raise HTTPException(
-                    status_code=400,
-                    detail="This book cannot be returned"
-                )
-
-            if book.is_available():
-                raise HTTPException(
-                    status_code=400,
-                    detail="Book is already available"
-                )
-
-            book.return_book()
-            library.save_books()
-
-            return {
-                "message": "Book returned successfully",
-                "book_id": book_id
-            }
-
-    raise HTTPException(
-        status_code=404,
-        detail="Book not found"
-    )
-
+# =========================
+# USERS / MEMBERS
+# =========================
 
 @app.get("/users")
 def get_users():
-    return [
-        {
-            "user_id": user.user_id,
-            "name": user.name,
-            "email": user.email
-        }
-        for user in user_service.users
-    ]
+
+    return get_all_members()
 
 
 @app.get("/users/{user_id}")
 def get_user(user_id: int):
-    user = user_service.get_user(user_id)
 
-    if user is None:
+    member = get_member(user_id)
+
+    if member is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return member
+
+
+@app.post("/users")
+def create_user(user_data: UserCreate):
+
+    existing_member = get_member(user_data.user_id)
+
+    if existing_member is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="User ID already exists"
+        )
+
+    try:
+
+        member = add_member(
+            member_id=user_data.user_id,
+            name=user_data.name,
+            email=user_data.email
+        )
+
+    except Exception as error:
+
+        if "UNIQUE constraint failed" in str(error):
+
+            raise HTTPException(
+                status_code=400,
+                detail="Email already exists"
+            )
+
+        raise
+
+    return {
+        "message": "User created successfully",
+        "user": member
+    }
+
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int):
+
+    deleted = delete_member_from_db(user_id)
+
+    if not deleted:
         raise HTTPException(
             status_code=404,
             detail="User not found"
         )
 
     return {
-        "user_id": user.user_id,
-        "name": user.name,
-        "email": user.email
+        "message": "User deleted successfully",
+        "user_id": user_id
     }
 
 
-@app.post("/users")
-def create_user(user_data: UserCreate):
-    if user_service.get_user(user_data.user_id):
-        raise HTTPException(
-            status_code=400,
-            detail="User ID already exists"
-        )
+# =========================
+# BORROW
+# =========================
 
-    user = User(
-        user_data.user_id,
-        user_data.name,
-        user_data.email
+@app.post("/books/{book_id}/borrow")
+def borrow_book(book_id: int, borrow_data: BorrowRequest):
+
+    result = borrow_book_from_db(
+        book_id=book_id,
+        member_id=borrow_data.member_id
     )
 
-    user_service.add_user(user)
-    user_service.save_users()
+    if not result["success"]:
+        raise HTTPException(
+            status_code=400,
+            detail=result["message"]
+        )
 
-    return {
-        "message": "User created successfully",
-        "user": {
-            "user_id": user.user_id,
-            "name": user.name,
-            "email": user.email
-        }
-    }
+    return result
+
+
+# =========================
+# RETURN
+# =========================
+
+@app.post("/books/{book_id}/return")
+def return_book(book_id: int):
+
+    result = return_book_from_db(book_id)
+
+    if not result["success"]:
+        raise HTTPException(
+            status_code=400,
+            detail=result["message"]
+        )
+
+    return result
+
+@app.get("/borrow-records")
+def borrow_history():
+
+    return get_borrow_history()
