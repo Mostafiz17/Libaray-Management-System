@@ -1,11 +1,18 @@
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from .services.auth_service import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    decode_access_token
+)
+
 from typing import Literal, Optional
 from .services.borrow_service import (
     borrow_book as borrow_book_from_db,
     return_book as return_book_from_db,
     get_borrow_history,
 )
-
-from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .models.book import EBook, PrintedBook, Returnable
@@ -23,17 +30,65 @@ from .services.book_service import (
 from .services.member_service import (
     get_all_members,
     get_member,
+    get_member_by_email,
     add_member,
     delete_member as delete_member_from_db,
 )
-
-
 app = FastAPI(
     title="Library Management System",
     description="API for managing books and users",
     version="1.0.0"
 )
 
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/auth/login"
+)
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme)
+):
+    payload = decode_access_token(token)
+
+    if payload is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+
+    user_id = payload.get("sub")
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token"
+        )
+
+    user = get_member(int(user_id))
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="User not found"
+        )
+
+    return user
+
+
+def get_current_admin(
+    current_user = Depends(get_current_user)
+):
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    return current_user
+
+
+@app.get("/users")
+def get_users():
+    return get_all_members()
 
 # Temporary old OOP library.
 # Borrow/return will be migrated later.
@@ -56,7 +111,14 @@ class UserCreate(BaseModel):
     name: str
     email: str
 
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
 class BorrowRequest(BaseModel):
     member_id: int
 
@@ -97,7 +159,10 @@ def get_book(book_id: int):
 
 
 @app.post("/books")
-def create_book(book_data: BookCreate):
+def create_book(
+    book_data: BookCreate,
+    current_admin = Depends(get_current_admin)
+):
 
     existing_book = get_book_from_db(book_data.id)
 
@@ -153,7 +218,10 @@ def create_book(book_data: BookCreate):
 
 
 @app.delete("/books/{book_id}")
-def delete_book(book_id: int):
+def delete_book(
+    book_id: int,
+    current_admin = Depends(get_current_admin)
+):
 
     deleted = delete_book_from_db(book_id)
 
@@ -175,9 +243,18 @@ def delete_book(book_id: int):
 
 @app.get("/users")
 def get_users():
-
     return get_all_members()
 
+@app.get("/users/me")
+def get_current_user_info(
+    current_user = Depends(get_current_user)
+):
+    return {
+        "id": current_user["id"],
+        "name": current_user["name"],
+        "email": current_user["email"],
+        "role": current_user["role"]
+    }
 
 @app.get("/users/{user_id}")
 def get_user(user_id: int):
@@ -194,7 +271,10 @@ def get_user(user_id: int):
 
 
 @app.post("/users")
-def create_user(user_data: UserCreate):
+def create_user(
+    user_data: UserCreate,
+    current_admin = Depends(get_current_admin)
+):
 
     existing_member = get_member(user_data.user_id)
 
@@ -228,10 +308,43 @@ def create_user(user_data: UserCreate):
         "user": member
     }
 
+@app.post("/auth/register")
+def register_user(register_data: RegisterRequest):
 
+    existing_member = get_member_by_email(
+        register_data.email
+    )
+
+    if existing_member is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+
+    hashed_password = hash_password(
+        register_data.password
+    )
+
+    member = add_member(
+        member_id=None,
+        name=register_data.name,
+        email=register_data.email,
+        password_hash=hashed_password
+    )
+
+    return {
+        "message": "User registered successfully",
+        "user": {
+            "id": member["id"],
+            "name": member["name"],
+            "email": member["email"]
+        }
+    }
 @app.delete("/users/{user_id}")
-def delete_user(user_id: int):
-
+def delete_user(
+    user_id: int,
+    current_admin = Depends(get_current_admin)
+):
     deleted = delete_member_from_db(user_id)
 
     if not deleted:
@@ -251,11 +364,14 @@ def delete_user(user_id: int):
 # =========================
 
 @app.post("/books/{book_id}/borrow")
-def borrow_book(book_id: int, borrow_data: BorrowRequest):
+def borrow_book(
+    book_id: int,
+    current_user = Depends(get_current_user)
+):
 
     result = borrow_book_from_db(
         book_id=book_id,
-        member_id=borrow_data.member_id
+        member_id=current_user["id"]
     )
 
     if not result["success"]:
@@ -272,7 +388,10 @@ def borrow_book(book_id: int, borrow_data: BorrowRequest):
 # =========================
 
 @app.post("/books/{book_id}/return")
-def return_book(book_id: int):
+def return_book(
+    book_id: int,
+    current_user = Depends(get_current_user)
+):
 
     result = return_book_from_db(book_id)
 
@@ -283,8 +402,50 @@ def return_book(book_id: int):
         )
 
     return result
+    
 
 @app.get("/borrow-records")
 def borrow_history():
 
     return get_borrow_history()
+
+@app.post("/auth/login")
+def login_user(
+    form_data: OAuth2PasswordRequestForm = Depends()
+):
+    member = get_member_by_email(
+        form_data.username
+    )
+
+    if member is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    if member["password_hash"] is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Account has no password"
+        )
+
+    password_correct = verify_password(
+        form_data.password,
+        member["password_hash"]
+    )
+
+    if not password_correct:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    access_token = create_access_token({
+    "sub": str(member["id"]),
+    "email": member["email"],
+    "role": member["role"]
+})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }

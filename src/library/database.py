@@ -32,10 +32,12 @@ def create_tables():
 
     connection.execute("""
         CREATE TABLE IF NOT EXISTS members (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE
-        )
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    password_hash TEXT,
+    role TEXT NOT NULL DEFAULT 'member'
+)
     """)
 
     connection.execute("""
