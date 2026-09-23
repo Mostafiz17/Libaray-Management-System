@@ -73,7 +73,7 @@ def borrow_book(book_id, member_id):
         connection.close()
 
 
-def return_book(book_id):
+def return_book(book_id, member_id):
     connection = get_connection()
 
     try:
@@ -92,13 +92,14 @@ def return_book(book_id):
 
         # 2. Find the active borrow record
         borrow_record = connection.execute("""
-            SELECT *
-            FROM borrow_records
-            WHERE book_id = ?
-            AND returned_at IS NULL
-            ORDER BY id DESC
-            LIMIT 1
-        """, (book_id,)).fetchone()
+    SELECT *
+    FROM borrow_records
+    WHERE book_id = ?
+    AND member_id = ?
+    AND returned_at IS NULL
+    ORDER BY id DESC
+    LIMIT 1
+""", (book_id, member_id)).fetchone()
 
         if borrow_record is None:
             return {

@@ -392,8 +392,10 @@ def return_book(
     book_id: int,
     current_user = Depends(get_current_user)
 ):
-
-    result = return_book_from_db(book_id)
+    result = return_book_from_db(
+        book_id=book_id,
+        member_id=current_user["id"]
+    )
 
     if not result["success"]:
         raise HTTPException(
