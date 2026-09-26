@@ -1,6 +1,7 @@
 # api.py
 
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import (
     HTTPBearer,
     HTTPAuthorizationCredentials,
@@ -49,6 +50,17 @@ app = FastAPI(
     title="Library Management System",
     description="API for managing books and users",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
