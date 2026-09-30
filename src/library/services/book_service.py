@@ -3,33 +3,38 @@ from ..database import get_connection
 
 def get_all_books():
     connection = get_connection()
+    cursor = connection.cursor()
 
-    books = connection.execute("""
+    cursor.execute("""
         SELECT *
         FROM books
         ORDER BY id
-    """).fetchall()
+    """)
 
+    books = cursor.fetchall()
+
+    cursor.close()
     connection.close()
 
-    return [dict(book) for book in books]
+    return books
 
 
 def get_book(book_id):
     connection = get_connection()
+    cursor = connection.cursor()
 
-    book = connection.execute("""
+    cursor.execute("""
         SELECT *
         FROM books
-        WHERE id = ?
-    """, (book_id,)).fetchone()
+        WHERE id = %s
+    """, (book_id,))
 
+    book = cursor.fetchone()
+
+    cursor.close()
     connection.close()
 
-    if book is None:
-        return None
-
-    return dict(book)
+    return book
 
 
 def add_book(
@@ -42,8 +47,9 @@ def add_book(
     copy_number=1
 ):
     connection = get_connection()
+    cursor = connection.cursor()
 
-    cursor = connection.execute("""
+    cursor.execute("""
         INSERT INTO books (
             id,
             title,
@@ -53,7 +59,7 @@ def add_book(
             file_size,
             copy_number
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (
         book_id,
         title,
@@ -66,6 +72,7 @@ def add_book(
 
     connection.commit()
 
+    cursor.close()
     connection.close()
 
     return get_book(book_id)
@@ -73,16 +80,18 @@ def add_book(
 
 def delete_book(book_id):
     connection = get_connection()
+    cursor = connection.cursor()
 
-    cursor = connection.execute("""
+    cursor.execute("""
         DELETE FROM books
-        WHERE id = ?
+        WHERE id = %s
     """, (book_id,))
 
     connection.commit()
 
     deleted = cursor.rowcount > 0
 
+    cursor.close()
     connection.close()
 
     return deleted

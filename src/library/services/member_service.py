@@ -3,33 +3,38 @@ from ..database import get_connection
 
 def get_all_members():
     connection = get_connection()
+    cursor = connection.cursor()
 
-    members = connection.execute("""
+    cursor.execute("""
         SELECT *
         FROM members
         ORDER BY id
-    """).fetchall()
+    """)
 
+    members = cursor.fetchall()
+
+    cursor.close()
     connection.close()
 
-    return [dict(member) for member in members]
+    return members
 
 
 def get_member(member_id):
     connection = get_connection()
+    cursor = connection.cursor()
 
-    member = connection.execute("""
+    cursor.execute("""
         SELECT *
         FROM members
-        WHERE id = ?
-    """, (member_id,)).fetchone()
+        WHERE id = %s
+    """, (member_id,))
 
+    member = cursor.fetchone()
+
+    cursor.close()
     connection.close()
 
-    if member is None:
-        return None
-
-    return dict(member)
+    return member
 
 
 def add_member(
@@ -40,17 +45,19 @@ def add_member(
     role="member"
 ):
     connection = get_connection()
+    cursor = connection.cursor()
 
     if member_id is None:
 
-        cursor = connection.execute("""
+        cursor.execute("""
             INSERT INTO members (
                 name,
                 email,
                 password_hash,
                 role
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
         """, (
             name,
             email,
@@ -58,11 +65,11 @@ def add_member(
             role
         ))
 
-        member_id = cursor.lastrowid
+        member_id = cursor.fetchone()["id"]
 
     else:
 
-        connection.execute("""
+        cursor.execute("""
             INSERT INTO members (
                 id,
                 name,
@@ -70,7 +77,7 @@ def add_member(
                 password_hash,
                 role
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             member_id,
             name,
@@ -80,22 +87,27 @@ def add_member(
         ))
 
     connection.commit()
+
+    cursor.close()
     connection.close()
 
     return get_member(member_id)
 
+
 def delete_member(member_id):
     connection = get_connection()
+    cursor = connection.cursor()
 
-    cursor = connection.execute("""
+    cursor.execute("""
         DELETE FROM members
-        WHERE id = ?
+        WHERE id = %s
     """, (member_id,))
 
     connection.commit()
 
     deleted = cursor.rowcount > 0
 
+    cursor.close()
     connection.close()
 
     return deleted
@@ -103,16 +115,17 @@ def delete_member(member_id):
 
 def get_member_by_email(email):
     connection = get_connection()
+    cursor = connection.cursor()
 
-    member = connection.execute("""
+    cursor.execute("""
         SELECT *
         FROM members
-        WHERE email = ?
-    """, (email,)).fetchone()
+        WHERE email = %s
+    """, (email,))
 
+    member = cursor.fetchone()
+
+    cursor.close()
     connection.close()
 
-    if member is None:
-        return None
-
-    return dict(member)
+    return member
